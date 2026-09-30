@@ -2,7 +2,29 @@
 
 ระบบจัดการเบิกจ่ายอุปกรณ์ไอที (Equipment Request System) สำหรับพนักงานและผู้อนุมัติ พัฒนาขึ้นด้วยสถาปัตยกรรมที่แยกส่วนชัดเจนระหว่าง Frontend (React/Next.js) และ Backend (Spring Boot/Kotlin) โดยให้ความสำคัญกับความถูกต้องของข้อมูล (Data Integrity), การตรวจสอบสิทธิ์ (Validation), และการจัดการการทำงานพร้อมกัน (Concurrency)
 
-## 📌 1. Environment (สภาพแวดล้อมที่ต้องการ)
+## 1. Project Requirements (ขอบเขตและข้อกำหนดของระบบ)
+
+โปรเจคนี้ถูกพัฒนาขึ้นเพื่อตอบสนองต่อโจทย์ความต้องการของระบบจัดการเบิกจ่ายอุปกรณ์ไอที โดยมีข้อกำหนดหลักดังต่อไปนี้:
+
+1. **ระบบจัดการคำขอเบิกอุปกรณ์ (Request Management)**
+   - ผู้ใช้งาน (Employee) สามารถสร้าง, บันทึกฉบับร่าง (Draft), แก้ไข, และส่งคำขอเบิกอุปกรณ์ได้
+   - ใน 1 คำขอเบิก สามารถเพิ่มรายการอุปกรณ์ (Equipment Items) ได้หลายรายการแบบ Dynamic (รองรับ 1-5 ชิ้นต่อรายการ)
+   - มีการตรวจสอบความถูกต้องของข้อมูล (Validation) ทั้งฝั่ง Frontend และ Backend อย่างเคร่งครัด
+2. **ระบบการอนุมัติและการจัดการสิทธิ์ (Role & Approval Flow)**
+   - แบ่งผู้ใช้งานออกเป็น 2 บทบาทหลัก ได้แก่ **Employee** (ผู้เบิก) และ **Approver** (ผู้อนุมัติ)
+   - ผู้อนุมัติสามารถเข้าถึงรายการคำขอทั้งหมด และดำเนินการ **อนุมัติ (Approve)** หรือ **ปฏิเสธ (Reject)** ได้
+   - หากดำเนินการปฏิเสธคำขอ (Reject) ระบบบังคับให้ต้องระบุเหตุผลประกอบเสมอ
+3. **การแสดงผลและค้นหา (Dashboard & Filtering)**
+   - มีหน้ารายการ (Data Table) สำหรับแสดงข้อมูลคำขอเบิกทั้งหมด
+   - รองรับการค้นหาผ่าน Keyword และการกรองข้อมูล (Filter) ตามสถานะของคำขอ
+4. **การควบคุมสถานะของคำขอ (State Machine)**
+   - ระบบต้องควบคุมการเปลี่ยนผ่านสถานะอย่างเข้มงวด ได้แก่ `DRAFT` ➔ `PENDING` ➔ `APPROVED` / `REJECTED` / `CANCELLED`
+   - คำขอที่อยู่ในสถานะปลายทาง (Terminal States) จะไม่อนุญาตให้แก้ไขข้อมูลได้อีก
+
+
+---
+
+## 2. Environment (สภาพแวดล้อมที่ต้องการ)
 - **OS**: macOS / Linux / Windows
 - **Node.js**: v20.x ขึ้นไป (ใช้สำหรับการรัน Frontend)
 - **JDK Version**: Java 21 (ใช้สำหรับการรัน Backend)
@@ -12,15 +34,15 @@
 
 ---
 
-## 🚀 2. Run (วิธีติดตั้งและใช้งาน)
+## 3. Run (วิธีติดตั้งและใช้งาน)
 
-### 2.1 การเตรียม Database (PostgreSQL & Redis)
+### 3.1 การเตรียม Database (PostgreSQL & Redis)
 ระบบใช้ Docker Compose ในการรันฐานข้อมูลและ Cache หากมี Docker ติดตั้งแล้ว ให้รันคำสั่งที่ Root ของโปรเจค:
 ```bash
 docker-compose up -d
 ```
 
-### 2.2 การรัน Backend (Spring Boot)
+### 3.2 การรัน Backend (Spring Boot)
 Backend ถูกออกแบบให้จัดการ Schema อัตโนมัติด้วย **Flyway** (ไม่มีการใช้ `ddl-auto=create`) เมื่อรันเซิร์ฟเวอร์ครั้งแรก ตารางทั้งหมดจะถูกสร้างเอง 
 ```bash
 cd backend
@@ -28,7 +50,7 @@ mvn clean spring-boot:run -Dmaven.test.skip=true
 ```
 *เซิร์ฟเวอร์จะรันอยู่ที่: `http://localhost:8080`*
 
-### 2.3 การรัน Frontend (Next.js)
+### 3.3 การรัน Frontend (Next.js)
 ```bash
 cd frontend
 npm install --legacy-peer-deps
@@ -38,7 +60,7 @@ npm run dev
 
 ---
 
-## 🧪 3. Test & API (การทดสอบและเอกสาร)
+## 4. Test & API (การทดสอบและเอกสาร)
 
 ### การรัน Automated Tests
 **Backend (JUnit 5 + Mockito + MockK):** 
@@ -58,26 +80,26 @@ npx vitest run
 
 ---
 
-## 📐 4. Decisions (สิ่งที่เลือกใช้เพิ่มเติมเหนือจากที่โจทย์กำหนด)
+## 5. Architecture & Technical Decisions (การตัดสินใจทางสถาปัตยกรรมและเทคโนโลยีเพิ่มเติม)
 
-เพื่อให้โปรเจคนี้มีมาตรฐานระดับ **Production-Ready** และสามารถสเกลได้จริง เราได้ตัดสินใจเลือกใช้เครื่องมือและออกแบบสถาปัตยกรรมที่ "เกินกว่า" requirement พื้นฐานของโจทย์ ดังนี้:
+ในการพัฒนาระบบนี้ นอกเหนือจากการบรรลุข้อกำหนดเบื้องต้นของโจทย์ (Requirements) แล้ว ทางผู้พัฒนาได้เลือกใช้เทคโนโลยีและแนวทางการออกแบบระบบเพิ่มเติม เพื่อยกระดับสถาปัตยกรรมให้สอดคล้องกับมาตรฐานทางอุตสาหกรรม (Industry Standards) สำหรับซอฟต์แวร์ระดับ Production ดังต่อไปนี้:
 
-### 4.1 เทคโนโลยีฝั่ง Backend
-1. **Kotlin (แทน Java):** เลือกใช้ Kotlin เพื่อโค้ดที่กระชับและปลอดภัยจาก `NullPointerException` (Null-safety)
-2. **Flyway (แทน Hibernate DDL-Auto):** แทนที่จะให้ ORM สร้างตารางเองแบบออโต้ ซึ่งเสี่ยงต่อข้อมูลพังใน Production เราใช้ Flyway Migration Script ควบคุม Version ของ Database Schema (V1, V2)
-3. **Optimistic Locking (`@Version`):** โจทย์ไม่ได้บังคับเรื่อง Concurrency แต่เราจัดการปัญหานี้ไว้ล่วงหน้า หากผู้ใช้งาน 2 คนเปิดหน้าแก้ไขคำขอเดียวกันพร้อมกัน คนที่กดเซฟทีหลังจะโดนตีกลับด้วย HTTP 409 Conflict (ไม่เซฟทับมั่วซั่ว)
-4. **Action-based API:** แทนที่จะสร้าง API แบบ CRUD ทั่วไป (ที่ยอมให้ Client ส่งค่า Status = APPROVED มาตรงๆ) เราบังคับใช้ Endpoint เชิงพฤติกรรม เช่น `POST /{id}/submit` หรือ `POST /{id}/decision` เพื่อป้องกันช่องโหว่ด้านความปลอดภัย
+### 4.1 สถาปัตยกรรมและเทคโนโลยีฝั่ง Backend
+1. **การใช้ภาษา Kotlin:** เลือกใช้แทน Java เพื่อลดความซับซ้อนของโค้ด (Conciseness) และใช้ประโยชน์จากระบบ Null-Safety ในการป้องกันข้อผิดพลาดประเภท `NullPointerException` ในขณะรันไทม์
+2. **การจัดการ Database Migration ด้วย Flyway:** ยกเลิกการใช้ `hibernate.ddl-auto` ในการสร้างตารางอัตโนมัติ และเปลี่ยนมาใช้ Flyway ในการควบคุมเวอร์ชันของ Database Schema อย่างเป็นระบบ เพื่อป้องกันการสูญหายของข้อมูลในสภาพแวดล้อม Production
+3. **การจัดการสภาวะการทำงานพร้อมกัน (Concurrency Control):** ประยุกต์ใช้ **Optimistic Locking** ผ่านคำสั่ง `@Version` ในระดับ Entity แม้โจทย์จะไม่ได้ระบุไว้ เพื่อป้องกันปัญหา Data Overwrite ในกรณีที่ผู้ใช้งานมากกว่าหนึ่งรายพยายามแก้ไขข้อมูลคำขอเดียวกันในเวลาเดียวกัน (ระบบจะตอบกลับด้วย HTTP Status 409 Conflict)
+4. **การออกแบบ API เชิงพฤติกรรม (Action-Based API):** เพื่อความปลอดภัยขั้นสูงสุดของระบบ ได้หลีกเลี่ยงการเปิด Endpoint แบบ CRUD ที่อนุญาตให้ Client ส่งค่าสถานะ (Status) ได้โดยตรง และเปลี่ยนเป็นการใช้ Endpoint ตามพฤติกรรมแทน (เช่น `POST /{id}/submit`, `POST /{id}/decision`) โดยให้ระบบหลังบ้านเป็นผู้ควบคุมสถานะอย่างเด็ดขาด
 
-### 4.2 เทคโนโลยีฝั่ง Frontend
-1. **Next.js (App Router):** เลือกใช้ Framework สมัยใหม่แทน React (Vite/CRA) ธรรมดา เพื่อให้พร้อมต่อยอดระบบ Routing แบบ Server Components ในอนาคต
-2. **Zod + React Hook Form:** โจทย์ต้องการแค่ Validation แต่เราเลือกใช้คู่มือนี้เพื่อให้การ Validate ฝั่ง Client ลื่นไหลที่สุด ลดการ Re-render ของ React ทุกครั้งที่พิมพ์ (Performance ดีขึ้น) และแมป Error กลับมาจาก Backend ได้แม่นยำ
-3. **Vitest (แทน Jest):** เลือกใช้ Test Runner ยุคใหม่ที่เร็วกว่าและรองรับ TypeScript/ESM แบบ Native ทันที โดยไม่ต้องคอนฟิก Babel ให้วุ่นวาย
-4. **URL Search Params สำหรับ Filter:** ข้อมูลการค้นหาทั้งหมด (Keyword, Status) ถูกเก็บลง URL Parameter (แทนการเก็บลง `useState` ปกติ) เพื่อให้ผู้ใช้สามารถกด Refresh หน้าเว็บ หรือแชร์ลิงก์ให้คนอื่นได้โดยที่ฟิลเตอร์ไม่หาย
+### 4.2 สถาปัตยกรรมและเทคโนโลยีฝั่ง Frontend
+1. **การประยุกต์ใช้ Next.js (App Router):** เลือกใช้สถาปัตยกรรมรุ่นใหม่ของ Next.js เพื่อรองรับการทำ Server-Side Rendering (SSR) และปรับปรุงประสิทธิภาพในการโหลดหน้าเว็บ
+2. **การบูรณาการ React Hook Form ร่วมกับ Zod:** เพื่อลดปัญหาคอขวดด้านประสิทธิภาพ (Performance Bottleneck) จากการ Re-render ของ React ทุกครั้งที่มีการป้อนข้อมูล ทางผู้พัฒนาได้เลือกใช้ React Hook Form ร่วมกับ Zod ในการควบคุม Schema Validation ทั้งนี้เพื่อให้การตรวจสอบความถูกต้องของข้อมูลมีความแม่นยำและสอดคล้องกับ Contract ของฝั่ง Backend
+3. **การทดสอบระบบด้วย Vitest:** เลือกใช้ Vitest แทน Jest ในการเขียน Unit Test เพื่อเพิ่มความรวดเร็วในการประมวลผล และรองรับโครงสร้างแบบ TypeScript และ ESM ได้อย่างเต็มรูปแบบ
+4. **การจัดการ State ของเงื่อนไขการค้นหา (URL Search Params):** กำหนดให้พารามิเตอร์การค้นหาและการกรองข้อมูล (Filters) ทั้งหมด ถูกจัดเก็บอยู่บน URL แทนการเก็บใน Component State เพื่อให้ระบบยังคงรักษาสถานะการค้นหาไว้ได้เมื่อผู้ใช้งานทำการรีเฟรชหน้าเว็บ หรือแชร์ลิงก์ข้อมูลให้แก่บุคลากรอื่น
 
 
 ---
 
-## 📂 5. Folder Structure (โครงสร้างโปรเจค)
+## 6. Folder Structure (โครงสร้างโปรเจค)
 
 ### Frontend (Next.js)
 ```text
@@ -112,7 +134,7 @@ backend/
 └── pom.xml                     # ไฟล์จัดการ Maven Dependencies
 ```
 
-## ⚠️ 6. Scope (สมมติฐานและข้อจำกัด)
+## 7. Scope (สมมติฐานและข้อจำกัด)
 
 ### Assumptions (สมมติฐาน)
 - **Mock Authentication:** ระบบไม่มีหน้า Login จริง ใช้แนวทางจำลอง (Mock) ผ่าน Request Header (`X-User-Id`, `X-Role`) แทน เพื่อเน้นพัฒนา Logic อนุมัติ 
@@ -125,7 +147,7 @@ backend/
 
 ---
 
-## 📊 7. Database Schema & Architecture Diagrams
+## 8. Database Schema & Architecture Diagrams
 
 ### Entity-Relationship (ER) Diagram
 โครงสร้างตารางหลักที่ใช้ในระบบประกอบด้วยตาราง `equipment_requests` (คำขอ) และ `equipment_request_items` (รายการอุปกรณ์ในแต่ละคำขอ) ซึ่งมีความสัมพันธ์แบบ One-to-Many
@@ -196,7 +218,7 @@ stateDiagram-v2
 
 ---
 
-## 🖥️ 8. UI Captures (ภาพหน้าจอระบบ)
+## 9. UI Captures (ภาพหน้าจอระบบ)
 
 ### 1. หน้าเข้าสู่ระบบ (Mock Auth Selection)
 ![Mock Auth](docs/images/mock-auth-login.png)

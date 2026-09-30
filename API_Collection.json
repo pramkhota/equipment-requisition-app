@@ -1,0 +1,81 @@
+{
+  "info": {
+    "name": "IT Equipment Request API",
+    "description": "API Collection for Equipment Request assignment",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get Catalogs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/catalogs",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "catalogs"]
+        }
+      }
+    },
+    {
+      "name": "2. Create Draft Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-User-Id", "value": "employee-1" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"requiredDate\": \"2026-12-31\",\n  \"items\": [\n    {\n      \"equipmentId\": \"11111111-1111-1111-1111-111111111111\",\n      \"quantity\": 1\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/requests",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "requests"]
+        }
+      }
+    },
+    {
+      "name": "3. Submit Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-User-Id", "value": "employee-1" }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/v1/requests/{requestId}/submit",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "requests", "{requestId}", "submit"]
+        }
+      }
+    },
+    {
+      "name": "4. Approve / Reject Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-User-Id", "value": "approver-99" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"isApproved\": false,\n  \"rejectReason\": \"Budget cut\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/v1/requests/{requestId}/decision",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8080",
+          "path": ["api", "v1", "requests", "{requestId}", "decision"]
+        }
+      }
+    }
+  ]
+}
