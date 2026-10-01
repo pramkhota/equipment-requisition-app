@@ -218,7 +218,103 @@ stateDiagram-v2
 
 ---
 
-## 9. UI Captures (ภาพหน้าจอระบบ)
+## 9. API Sequence Diagrams & Data Flow
+
+เพื่อให้เห็นภาพการทำงานของระบบ (Data Flow) ระหว่าง Frontend, Backend, Redis, และ Database ได้อย่างชัดเจน ด้านล่างนี้คือ Sequence Diagrams ของ 3 Scenarios หลัก:
+
+### 9.1 Employee Flow: สร้างและส่งคำขอ (Create & Submit)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Employee
+    participant UI as Frontend (Next.js)
+    participant API as Backend (Spring Boot)
+    participant DB as PostgreSQL
+
+    Note over Employee, DB: Action: Create Draft
+    Employee->>UI: กรอกข้อมูล & กด "Save Draft"
+    UI->>API: POST /api/requests (Header: X-User-Id, X-Role: EMPLOYEE)
+    API->>API: Validate Data (DTO/Zod)
+    API->>DB: INSERT INTO request (status='DRAFT', version=0)
+    DB-->>API: return id=1
+    API-->>UI: 201 Created { "id": 1, "status": "DRAFT", "version": 0 }
+
+    Note over Employee, DB: Action: Submit Request
+    Employee->>UI: กด "Submit"
+    UI->>API: POST /api/requests/1/submit (Header: X-User-Id, X-Role: EMPLOYEE)
+    API->>DB: SELECT * FROM request WHERE id = 1
+    DB-->>API: return request
+    API->>API: Business Rule Check (ต้องมีของ >= 1 ชิ้น)
+    API->>DB: UPDATE request SET status='PENDING', version=1 WHERE id=1 AND version=0
+    DB-->>API: Update Success
+    API-->>UI: 200 OK { "id": 1, "status": "PENDING", "version": 1 }
+```
+
+### 9.2 Approver Flow: ดูรายการ และ อนุมัติ/ปฏิเสธ (Dashboard & Approve/Reject)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Approver
+    participant UI as Frontend (Next.js)
+    participant API as Backend (Spring Boot)
+    participant Redis as Redis Cache
+    participant DB as PostgreSQL
+
+    Note over Approver, DB: Action: Get Dashboard List
+    Approver->>UI: เปิดหน้า Dashboard
+    UI->>API: GET /api/requests?status=PENDING
+    API->>Redis: GET cache_requests_pending
+    alt Cache Hit
+        Redis-->>API: return JSON list
+    else Cache Miss
+        Redis-->>API: null
+        API->>DB: SELECT * FROM request WHERE status='PENDING'
+        DB-->>API: return data
+        API->>Redis: SET cache_requests_pending (data)
+    end
+    API-->>UI: 200 OK
+
+    Note over Approver, DB: Action: Approve Request
+    Approver->>UI: กดปุ่ม "Approve" ที่ Request ID 1
+    UI->>API: POST /api/requests/1/approve
+    API->>DB: SELECT request WHERE id = 1
+    DB-->>API: return request (status=PENDING)
+    API->>DB: UPDATE request SET status='APPROVED', version=2 WHERE id=1 AND version=1
+    DB-->>API: Update Success
+    API->>Redis: DEL cache_requests_pending (Cache Invalidation)
+    API-->>UI: 200 OK
+```
+
+### 9.3 Edge Case Flow: ข้อมูลชนกัน (Optimistic Locking Conflict)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor UserA
+    actor UserB
+    participant API as Backend (Spring Boot)
+    participant DB as PostgreSQL
+
+    Note over UserA, DB: เปิดหน้าจอเดียวกัน (ได้ version = 1 ทั้งคู่)
+    UserA->>API: GET /api/requests/1
+    UserB->>API: GET /api/requests/1
+
+    Note over UserA, DB: User A กดยกเลิกเร็วกว่า
+    UserA->>API: POST /api/requests/1/cancel { "version": 1 }
+    API->>DB: UPDATE ... SET status='CANCELLED', version=2 WHERE id=1 AND version=1
+    DB-->>API: Success (Affected rows = 1)
+    API-->>UserA: 200 OK
+
+    Note over UserB, DB: User B กด Submit ตามมาติดๆ
+    UserB->>API: POST /api/requests/1/submit { "version": 1 }
+    API->>DB: UPDATE ... SET status='PENDING', version=2 WHERE id=1 AND version=1
+    DB-->>API: Fail (Affected rows = 0) เพราะใน DB version = 2 แล้ว
+    API->>API: Throw OptimisticLockException
+    API-->>UserB: 409 Conflict (ข้อมูลถูกอัปเดตไปแล้ว)
+```
+
+---
+
+## 10. UI Captures (ภาพหน้าจอระบบ)
 
 ### 1. หน้าเข้าสู่ระบบ (Mock Auth Selection)
 ![Mock Auth](docs/images/mock-auth-login.png)
@@ -237,3 +333,4 @@ stateDiagram-v2
 
 ### 6. การปฏิเสธคำขอพร้อมระบุเหตุผล (Reject Modal)
 ![Reject Modal](docs/images/reject-modal.png)
+
